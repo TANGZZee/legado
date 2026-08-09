@@ -7,6 +7,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.help.book.BookAutoTagHelper
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
@@ -35,6 +36,17 @@ object DefaultData {
                 }
                 if (LocalConfig.needUpDictRule) {
                     importDefaultDictRules()
+                }
+            }.onError {
+                it.printOnDebug()
+            }
+        }
+        if (LocalConfig.autoTagBackfillVersion < 3) {
+            Coroutine.async {
+                runCatching {
+                    BookAutoTagHelper.backfillExistingBooks()
+                }.onSuccess {
+                    LocalConfig.autoTagBackfillVersion = 3
                 }
             }.onError {
                 it.printOnDebug()

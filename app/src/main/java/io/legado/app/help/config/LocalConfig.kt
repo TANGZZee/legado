@@ -76,6 +76,13 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         set(value) {
             edit { putLong(versionCodeKey, value) }
         }
+
+    var autoTagBackfillVersion: Int
+        get() = getInt("autoTagBackfillVersion", 0)
+        set(value) {
+            edit { putInt("autoTagBackfillVersion", value) }
+        }
+
     var lastCheckUpdate: Long
         get() = getLong("lastCheckUpdate", 0)
         set(value) {

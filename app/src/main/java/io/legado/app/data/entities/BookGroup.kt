@@ -37,7 +37,11 @@ data class BookGroup(
         const val IdNetNone = -4L
         const val IdLocalNone = -5L
         const val IdVideo = -6L
+        const val IdNovel = -7L
+        const val IdComic = -8L
         const val IdError = -11L
+        const val NovelGroupName = "小说"
+        const val ComicGroupName = "漫画"
     }
 
     fun getManageName(context: Context): String {
@@ -48,6 +52,8 @@ data class BookGroup(
             IdNetNone -> "$groupName(${context.getString(R.string.net_no_group)})"
             IdLocalNone -> "$groupName(${context.getString(R.string.local_no_group)})"
             IdVideo -> "$groupName(${context.getString(R.string.video)})"
+            IdNovel -> "$groupName(${context.getString(R.string.novel)})"
+            IdComic -> "$groupName(${context.getString(R.string.comic)})"
             IdError -> "$groupName(${context.getString(R.string.update_book_fail)})"
             else -> groupName
         }

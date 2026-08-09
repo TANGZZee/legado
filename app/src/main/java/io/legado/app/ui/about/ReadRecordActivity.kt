@@ -1,4 +1,4 @@
-package io.legado.app.ui.about
+﻿package io.legado.app.ui.about
 
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -17,6 +17,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseActivity
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.ReadRecordDailyBook
 import io.legado.app.databinding.ActivityReadRecordBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
@@ -41,8 +42,10 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Date
@@ -74,6 +77,7 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
     private var currentTotalTime: Long = 0L
     private var currentReadBookCount: Int = 0
     private val overviewUiState = mutableStateOf<ReadRecordOverviewUi?>(null)
+    private val statisticsUiState = mutableStateOf<ReadRecordStatisticsUi?>(null)
     private val recentBooksUiState = mutableStateOf<List<ReadRecordRecentBookUi>>(emptyList())
     private val dailyRecordsUiState = mutableStateOf<List<ReadRecordDayUi>>(emptyList())
     private val rankUiState = mutableStateOf<List<ReadRecordRankUi>>(emptyList())
@@ -83,6 +87,8 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
     private var currentDailyTimeline: List<DailyReadSummary> = emptyList()
     private var currentVisibleRankItems: List<ReadRecordRankItem> = emptyList()
     private var currentRecentCovers: List<ReadRecentVisualItem> = emptyList()
+    private var statisticsPeriod = ReadRecordStatsPeriod.MONTH
+    private var statisticsAnchor = LocalDate.now()
     private var pendingAvatarUpdate: ((String) -> Unit)? = null
     private var pendingAvatarCropRequest: ImageCropHelper.Request? = null
     private val selectGoalAvatar = registerForActivityResult(HandleFileContract()) {
@@ -142,6 +148,7 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
                             withContext(IO) {
                                 appDb.readRecordDao.clear()
                                 appDb.readRecordDailyDao.clear()
+                                appDb.readRecordDailyBookDao.clear()
                                 appDb.readRecentBookDao.clear()
                                 ReadRecordWidgetStore.clearRecentSnapshots()
                             }
@@ -165,6 +172,35 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
             LegadoComposeTheme {
                 overviewUiState.value?.let { ui ->
                     ReadRecordOverviewCard(ui = ui)
+                }
+            }
+        }
+        binding.panelStatistics.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.panelStatistics.setContent {
+            LegadoComposeTheme {
+                statisticsUiState.value?.let { ui ->
+                    ReadRecordStatisticsCard(
+                        ui = ui,
+                        onPeriodSelected = { period ->
+                            statisticsPeriod = period
+                            if (period == ReadRecordStatsPeriod.TOTAL) {
+                                statisticsAnchor = LocalDate.now()
+                            }
+                            loadData()
+                        },
+                        onPrevious = {
+                            statisticsAnchor = moveStatisticsAnchor(-1)
+                            loadData()
+                        },
+                        onNext = {
+                            if (ui.canGoNext) {
+                                statisticsAnchor = moveStatisticsAnchor(1)
+                                loadData()
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -324,7 +360,8 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
             rankItems = ReadRecordWidgetStore.buildRankItems(),
             goalConfig = ReadRecordWidgetStore.loadGoalConfig(),
             readBookCount = appDb.readRecordDao.allShow.size,
-            latestRecentReadTime = appDb.readRecentBookDao.latestReadTime() ?: 0L
+            latestRecentReadTime = appDb.readRecentBookDao.latestReadTime() ?: 0L,
+            statisticsUi = buildStatisticsUi()
         )
     }
 
@@ -339,6 +376,7 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
             }
         )
         overviewUiState.value = dashboard.toOverviewUi()
+        statisticsUiState.value = dashboard.statisticsUi
 
         val startDate = dashboard.heatmapCells.firstOrNull()?.date ?: dashboard.today
         val centerDate = dashboard.heatmapCells.getOrNull(dashboard.heatmapCells.size / 2)?.date
@@ -395,6 +433,7 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
         }
         val parent = binding.llReadRecordComponents
         val componentViews = linkedMapOf(
+            ReadRecordComponentType.STATISTICS to binding.panelStatistics,
             ReadRecordComponentType.OVERVIEW to binding.panelOverview,
             ReadRecordComponentType.HEATMAP to binding.panelHeatmap,
             ReadRecordComponentType.RECENT_BOOKS to binding.panelRecentBooks,
@@ -420,6 +459,216 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
                 view.isVisible = true
                 parent.addView(view)
             }
+        }
+    }
+
+    private fun moveStatisticsAnchor(offset: Int): LocalDate {
+        return when (statisticsPeriod) {
+            ReadRecordStatsPeriod.DAY -> statisticsAnchor.plusDays(offset.toLong())
+            ReadRecordStatsPeriod.WEEK -> statisticsAnchor.plusWeeks(offset.toLong())
+            ReadRecordStatsPeriod.MONTH -> statisticsAnchor.plusMonths(offset.toLong())
+            ReadRecordStatsPeriod.YEAR -> statisticsAnchor.plusYears(offset.toLong())
+            ReadRecordStatsPeriod.TOTAL -> statisticsAnchor
+        }
+    }
+
+    private fun buildStatisticsUi(): ReadRecordStatisticsUi {
+        val dailyRecords = appDb.readRecordDailyDao.allDesc
+        val dailyBooks = buildStatisticsBooks(
+            dailyBooks = appDb.readRecordDailyBookDao.all,
+            legacyRecords = appDb.readRecordDao.allShow
+        )
+        val bookmarkTimes = appDb.bookmarkDao.all.map { it.time }
+        val current = calculateReadRecordStatistics(
+            period = statisticsPeriod,
+            anchor = statisticsAnchor,
+            dailyRecords = dailyRecords,
+            dailyBooks = dailyBooks,
+            bookmarkTimes = bookmarkTimes
+        )
+        val previous = calculateReadRecordStatistics(
+            period = statisticsPeriod,
+            anchor = moveStatisticsAnchor(-1),
+            dailyRecords = dailyRecords,
+            dailyBooks = dailyBooks,
+            bookmarkTimes = bookmarkTimes
+        )
+        val range = ReadRecordStatsRange.of(statisticsPeriod, statisticsAnchor)
+        val tabs = listOf(
+            getString(R.string.read_record_stats_tab_day),
+            getString(R.string.read_record_stats_tab_week),
+            getString(R.string.read_record_stats_tab_month),
+            getString(R.string.read_record_stats_tab_year),
+            getString(R.string.read_record_stats_tab_total)
+        )
+        return ReadRecordStatisticsUi(
+            period = statisticsPeriod,
+            tabs = tabs,
+            title = formatStatisticsTitle(statisticsPeriod, range),
+            canGoNext = statisticsPeriod != ReadRecordStatsPeriod.TOTAL &&
+                range.end?.isBefore(LocalDate.now()) == true,
+            metrics = listOf(
+                statisticsMetric(
+                    iconRes = R.drawable.ic_timer_black_24dp,
+                    value = formatDuring(current.readingTime),
+                    label = getString(R.string.read_record_stats_reading_time),
+                    current = current.readingTime,
+                    previous = previous.readingTime,
+                    format = ::formatDuring
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_daytime,
+                    value = getString(R.string.read_record_stats_days_value, current.readingDays),
+                    label = getString(R.string.read_record_stats_reading_days),
+                    current = current.readingDays.toLong(),
+                    previous = previous.readingDays.toLong(),
+                    format = { getString(R.string.read_record_stats_days_value, it) }
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_book_has,
+                    value = getString(R.string.read_record_stats_books_value, current.totalReadBooks),
+                    label = getString(R.string.read_record_stats_total_books),
+                    current = current.totalReadBooks.toLong(),
+                    previous = previous.totalReadBooks.toLong(),
+                    format = { getString(R.string.read_record_stats_books_value, it) }
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_check,
+                    value = getString(R.string.read_record_stats_books_value, current.finishedBooks),
+                    label = getString(R.string.read_record_stats_finished_books),
+                    current = current.finishedBooks.toLong(),
+                    previous = previous.finishedBooks.toLong(),
+                    format = { getString(R.string.read_record_stats_books_value, it) }
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_book_last,
+                    value = getString(R.string.read_record_stats_books_value, current.inProgressBooks),
+                    label = getString(R.string.read_record_stats_in_progress_books),
+                    current = current.inProgressBooks.toLong(),
+                    previous = previous.inProgressBooks.toLong(),
+                    format = { getString(R.string.read_record_stats_books_value, it) }
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_bottom_read_record_e,
+                    value = formatReadWords(current.readingWords),
+                    label = getString(R.string.read_record_stats_reading_words),
+                    current = current.readingWords,
+                    previous = previous.readingWords,
+                    format = ::formatReadWords
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_speed_control,
+                    value = getString(R.string.read_record_stats_speed_value, current.readingSpeed),
+                    label = getString(R.string.read_record_stats_reading_speed),
+                    current = current.readingSpeed,
+                    previous = previous.readingSpeed,
+                    format = { getString(R.string.read_record_stats_speed_value, it) }
+                ),
+                statisticsMetric(
+                    iconRes = R.drawable.ic_bookmark,
+                    value = getString(R.string.read_record_stats_notes_value, current.noteCount),
+                    label = getString(R.string.read_record_stats_notes),
+                    current = current.noteCount.toLong(),
+                    previous = previous.noteCount.toLong(),
+                    format = { getString(R.string.read_record_stats_notes_value, it) }
+                )
+            )
+        )
+    }
+
+    private fun buildStatisticsBooks(
+        dailyBooks: List<ReadRecordDailyBook>,
+        legacyRecords: List<io.legado.app.data.entities.ReadRecordShow>
+    ): List<ReadRecordDailyBook> {
+        val knownNames = dailyBooks.map { it.bookName }.toSet()
+        val legacyBooks = legacyRecords
+            .filter { it.bookName !in knownNames }
+            .map { record ->
+                val book = appDb.bookDao.findByName(record.bookName).firstOrNull()
+                ReadRecordDailyBook(
+                    date = Instant.ofEpochMilli(record.lastRead)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .toString(),
+                    bookUrl = "legacy:${record.bookName}",
+                    bookName = record.bookName,
+                    readTime = record.readTime,
+                    finished = book?.let {
+                        it.totalChapterNum > 0 && it.durChapterIndex >= it.lastChapterIndex
+                    } == true,
+                    updatedAt = record.lastRead
+                )
+            }
+        return dailyBooks + legacyBooks
+    }
+
+    private fun formatStatisticsTitle(
+        period: ReadRecordStatsPeriod,
+        range: ReadRecordStatsRange
+    ): String {
+        return when (period) {
+            ReadRecordStatsPeriod.DAY -> range.start?.let {
+                getString(
+                    R.string.read_record_stats_day_title,
+                    it.year,
+                    it.monthValue,
+                    it.dayOfMonth
+                )
+            }.orEmpty()
+            ReadRecordStatsPeriod.WEEK -> {
+                val start = range.start ?: return ""
+                val end = range.end ?: start
+                getString(
+                    R.string.read_record_stats_week_title,
+                    start.year,
+                    start.monthValue,
+                    start.dayOfMonth,
+                    end.monthValue,
+                    end.dayOfMonth
+                )
+            }
+            ReadRecordStatsPeriod.MONTH -> range.start?.let {
+                getString(R.string.read_record_stats_month_title, it.year, it.monthValue)
+            }.orEmpty()
+            ReadRecordStatsPeriod.YEAR -> range.start?.let {
+                getString(R.string.read_record_stats_year_title, it.year)
+            }.orEmpty()
+            ReadRecordStatsPeriod.TOTAL -> getString(R.string.read_record_stats_total_title)
+        }
+    }
+
+    private fun statisticsMetric(
+        iconRes: Int,
+        value: String,
+        label: String,
+        current: Long,
+        previous: Long,
+        format: (Long) -> String
+    ): ReadRecordStatisticsMetricUi {
+        val difference = current - previous
+        val trend = when {
+            difference > 0L -> getString(R.string.read_record_stats_trend_up, format(difference))
+            difference < 0L -> getString(R.string.read_record_stats_trend_down, format(-difference))
+            else -> getString(R.string.read_record_stats_trend_neutral)
+        }
+        return ReadRecordStatisticsMetricUi(
+            iconRes = iconRes,
+            value = value,
+            label = label,
+            trend = trend,
+            trendColor = when {
+                difference > 0L -> 0xFF4CAF50.toInt()
+                difference < 0L -> 0xFFF44336.toInt()
+                else -> secondaryTextColor
+            }
+        )
+    }
+
+    private fun formatReadWords(words: Long): String {
+        return if (words >= 10_000L) {
+            String.format(Locale.getDefault(), "%.1f万字", words / 10_000.0)
+        } else {
+            "${words.coerceAtLeast(0L)}字"
         }
     }
 
@@ -717,7 +966,8 @@ private data class ReadRecordDashboard(
     val rankItems: List<ReadRecordRankItem>,
     val goalConfig: ReadRecordGoalConfig,
     val readBookCount: Int,
-    val latestRecentReadTime: Long
+    val latestRecentReadTime: Long,
+    val statisticsUi: ReadRecordStatisticsUi
 )
 
 private data class RecentReadBook(

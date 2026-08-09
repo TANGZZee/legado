@@ -20,6 +20,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.FragmentBookshelf1Binding
 import io.legado.app.help.book.BookTagHelper
+import io.legado.app.help.book.BookTagManagement
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.primaryColor
@@ -275,22 +276,20 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         if (!isAdded) return
         val allText = getString(R.string.bookshelf_tag_all)
         val storedTags = AppConfig.bookshelfGroupTags[groupId].orEmpty()
-        val tags = storedTags.ifEmpty {
-            val migratedTags = books.asSequence()
-                .flatMap { BookTagHelper.parse(it.customTag).asSequence() }
-                .distinct()
-                .sorted()
-                .toList()
-            if (migratedTags.isNotEmpty()) {
-                val map = AppConfig.bookshelfGroupTags.toMutableMap()
-                map[groupId] = migratedTags
-                AppConfig.bookshelfGroupTags = map
-            }
-            migratedTags
+        val derivedTags = books.asSequence()
+            .flatMap { BookTagHelper.parse(it.customTag).asSequence() }
+            .distinct()
+            .sorted()
+            .toList()
+        val tags = BookTagManagement.mergeTags(storedTags, derivedTags)
+        if (tags != storedTags) {
+            val map = AppConfig.bookshelfGroupTags.toMutableMap()
+            map[groupId] = tags
+            AppConfig.bookshelfGroupTags = map
         }
-            .filterNot { it in AppConfig.bookshelfHiddenTags[groupId].orEmpty() }
-        bookTags = listOf("") + tags
-        if (selectedBookTag.isNotBlank() && selectedBookTag !in tags) {
+        val visibleTags = tags.filterNot { it in AppConfig.bookshelfHiddenTags[groupId].orEmpty() }
+        bookTags = listOf("") + visibleTags
+        if (selectedBookTag.isNotBlank() && selectedBookTag !in visibleTags) {
             selectedBookTag = ""
             fragmentMap[groupId]?.setBookTagFilter("")
         }

@@ -33,6 +33,7 @@ import io.legado.app.data.dao.ReadAloudSpeakerGroupDao
 import io.legado.app.data.dao.ReadMenuCustomButtonDao
 import io.legado.app.data.dao.ReadRecentBookDao
 import io.legado.app.data.dao.ReadRecordDao
+import io.legado.app.data.dao.ReadRecordDailyBookDao
 import io.legado.app.data.dao.ReadRecordDailyDao
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.dao.RssArticleDao
@@ -80,6 +81,7 @@ import io.legado.app.data.entities.ReadAloudSpeakerGroupItem
 import io.legado.app.data.entities.ReadMenuCustomButton
 import io.legado.app.data.entities.ReadRecentBook
 import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.ReadRecordDailyBook
 import io.legado.app.data.entities.ReadRecordDaily
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssArticle
@@ -106,12 +108,13 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 109,
+    version = 110,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
         RssSource::class, Bookmark::class, RssArticle::class, RssReadRecord::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, ReadRecordDaily::class,
+        ReadRecordDailyBook::class,
         HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         ReadRecentBook::class, ParagraphRule::class, BookParagraphRule::class,
@@ -173,6 +176,7 @@ val appDb by lazy {
         AutoMigration(from = 87, to = 88),
         AutoMigration(from = 88, to = 89),
         AutoMigration(from = 89, to = 90),
+        AutoMigration(from = 109, to = 110),
         AutoMigration(from = 92, to = 93)
     ]
 )
@@ -194,6 +198,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val cookieDao: CookieDao
     abstract val txtTocRuleDao: TxtTocRuleDao
     abstract val readRecordDao: ReadRecordDao
+    abstract val readRecordDailyBookDao: ReadRecordDailyBookDao
     abstract val readRecordDailyDao: ReadRecordDailyDao
     abstract val readRecentBookDao: ReadRecentBookDao
     abstract val httpTTSDao: HttpTTSDao
@@ -285,6 +290,20 @@ abstract class AppDatabase : RoomDatabase() {
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
                     """.trimIndent()
                 db.execSQL(insertBookGroupVideoSql)
+                @Language("sql")
+                val insertBookGroupNovelSql = """
+                    insert into book_groups(groupId, groupName, 'order', show)
+                    select ${BookGroup.IdNovel}, '${BookGroup.NovelGroupName}', -4, 1
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdNovel})
+                """.trimIndent()
+                db.execSQL(insertBookGroupNovelSql)
+                @Language("sql")
+                val insertBookGroupComicSql = """
+                    insert into book_groups(groupId, groupName, 'order', show)
+                    select ${BookGroup.IdComic}, '${BookGroup.ComicGroupName}', -3, 1
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdComic})
+                """.trimIndent()
+                db.execSQL(insertBookGroupComicSql)
                 @Language("sql")
                 val insertBookGroupErrorSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 

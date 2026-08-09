@@ -1,4 +1,4 @@
-*.iml
+﻿*.iml
 .gradle
 local.properties
 *.jks
@@ -40,3 +40,6 @@ cloudflare/**/.wrangler/
 # local build logs (Claude)
 /rb*.log
 /release-build*.log
+
+# local debug screenshots
+/screen*.png

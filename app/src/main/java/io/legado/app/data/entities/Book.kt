@@ -12,6 +12,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
+import io.legado.app.help.book.BookAutoTagHelper
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getFolderNameNoCache
@@ -437,7 +438,35 @@ data class Book(
         if (appDb.bookDao.has(bookUrl)) {
             appDb.bookDao.update(this)
         } else {
+            autoAssignTypeGroups()
+            autoAssignTags()
             appDb.bookDao.insert(this)
+        }
+    }
+
+    /**
+     * 新书入库时自动加入同名的小说/漫画自定义分组
+     */
+    private fun autoAssignTypeGroups() {
+        val groupNames = buildList {
+            if (type and BookType.text > 0) add(BookGroup.NovelGroupName)
+            if (type and BookType.image > 0) add(BookGroup.ComicGroupName)
+        }
+        if (groupNames.isEmpty()) return
+        appDb.bookGroupDao.all
+            .filter { it.groupId > 0 && it.groupName in groupNames }
+            .forEach { bookGroup ->
+                group = group or bookGroup.groupId
+            }
+    }
+
+    /**
+     * 新书入库时按来源分类自动打标签，不覆盖用户已有的标签
+     */
+    private fun autoAssignTags() {
+        val tags = BookAutoTagHelper.detectTags(type, kind, name, originName, intro)
+        if (tags.isNotEmpty()) {
+            customTag = BookAutoTagHelper.mergeTags(customTag, tags)
         }
     }
 

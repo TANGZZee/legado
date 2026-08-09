@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.read
+﻿package io.legado.app.ui.book.read
 
 import android.annotation.SuppressLint
 import android.content.ClipData
@@ -702,6 +702,7 @@ class ReadBookActivity : BaseReadBookActivity(),
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
+        ChapterProvider.markViewSizeUnsettled()
         ReadBook.readStartTime = System.currentTimeMillis()
         if (bookChanged) {
             bookChanged = false

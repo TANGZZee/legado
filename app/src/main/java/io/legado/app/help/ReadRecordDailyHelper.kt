@@ -1,6 +1,8 @@
 package io.legado.app.help
 
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.ReadRecordDailyBook
 import io.legado.app.data.entities.ReadRecordDaily
 import io.legado.app.receiver.ReadGoalWidgetProvider
 import io.legado.app.receiver.ReadRankWidgetProvider
@@ -15,6 +17,24 @@ object ReadRecordDailyHelper {
 
     fun record(
         readTime: Long,
+        timestamp: Long = System.currentTimeMillis(),
+        forceWidgetUpdate: Boolean = false
+    ) {
+        record(
+            book = null,
+            readTime = readTime,
+            readWords = 0L,
+            finished = false,
+            timestamp = timestamp,
+            forceWidgetUpdate = forceWidgetUpdate
+        )
+    }
+
+    fun record(
+        book: Book?,
+        readTime: Long,
+        readWords: Long = 0L,
+        finished: Boolean = false,
         timestamp: Long = System.currentTimeMillis(),
         forceWidgetUpdate: Boolean = false
     ) {
@@ -37,6 +57,30 @@ object ReadRecordDailyHelper {
             )
         }
         appDb.readRecordDailyDao.insert(record)
+        if (book != null) {
+            val currentBook = appDb.readRecordDailyBookDao.get(dateKey, book.bookUrl)
+            appDb.readRecordDailyBookDao.insert(
+                if (currentBook == null) {
+                    ReadRecordDailyBook(
+                        date = dateKey,
+                        bookUrl = book.bookUrl,
+                        bookName = book.name,
+                        readTime = readTime,
+                        readWords = readWords.coerceAtLeast(0L),
+                        finished = finished,
+                        updatedAt = timestamp
+                    )
+                } else {
+                    currentBook.copy(
+                        bookName = book.name,
+                        readTime = currentBook.readTime + readTime,
+                        readWords = currentBook.readWords + readWords.coerceAtLeast(0L),
+                        finished = currentBook.finished || finished,
+                        updatedAt = timestamp
+                    )
+                }
+            )
+        }
         ReadGoalWidgetProvider.updateAll(appCtx, force = forceWidgetUpdate)
         ReadRankWidgetProvider.updateAll(appCtx, force = forceWidgetUpdate)
     }

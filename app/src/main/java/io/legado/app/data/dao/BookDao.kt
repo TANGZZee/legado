@@ -32,6 +32,8 @@ interface BookDao {
             BookGroup.IdNetNone -> flowNetNoGroup()
             BookGroup.IdLocalNone -> flowLocalNoGroup()
             BookGroup.IdVideo -> flowVideo()
+            BookGroup.IdNovel -> flowNovel()
+            BookGroup.IdComic -> flowComic()
             BookGroup.IdError -> flowUpdateError()
             else -> flowByUserGroup(groupId)
         }.map { list ->
@@ -48,6 +50,8 @@ interface BookDao {
             BookGroup.IdNetNone -> flowShelfNetNoGroup()
             BookGroup.IdLocalNone -> flowShelfLocalNoGroup()
             BookGroup.IdVideo -> flowShelfVideo()
+            BookGroup.IdNovel -> flowShelfNovel()
+            BookGroup.IdComic -> flowShelfComic()
             BookGroup.IdError -> flowShelfUpdateError()
             else -> flowShelfByUserGroup(groupId)
         }
@@ -106,6 +110,32 @@ interface BookDao {
         """
     )
     fun flowShelfAudio(): Flow<List<BookShelfDisplay>>
+
+    @Query(
+        """
+        SELECT bookUrl, origin, originName, name, author, intro, customIntro, customTag, coverUrl, customCoverUrl,
+        type, `group`, latestChapterTitle, latestChapterTime, lastCheckCount, totalChapterNum,
+        durChapterTitle, durChapterIndex, durChapterTime, canUpdate, `order`, readConfig
+        FROM books
+        WHERE (type & ${BookType.notShelf}) = 0
+        AND (type & ${BookType.text}) > 0
+        ORDER BY durChapterTime DESC
+        """
+    )
+    fun flowShelfNovel(): Flow<List<BookShelfDisplay>>
+
+    @Query(
+        """
+        SELECT bookUrl, origin, originName, name, author, intro, customIntro, customTag, coverUrl, customCoverUrl,
+        type, `group`, latestChapterTitle, latestChapterTime, lastCheckCount, totalChapterNum,
+        durChapterTitle, durChapterIndex, durChapterTime, canUpdate, `order`, readConfig
+        FROM books
+        WHERE (type & ${BookType.notShelf}) = 0
+        AND (type & ${BookType.image}) > 0
+        ORDER BY durChapterTime DESC
+        """
+    )
+    fun flowShelfComic(): Flow<List<BookShelfDisplay>>
 
     @Query(
         """
@@ -229,6 +259,12 @@ interface BookDao {
 
     @Query("SELECT * FROM books WHERE type & ${BookType.audio} > 0")
     fun flowAudio(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE type & ${BookType.text} > 0")
+    fun flowNovel(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE type & ${BookType.image} > 0")
+    fun flowComic(): Flow<List<Book>>
 
     @Query("SELECT * FROM books WHERE type & ${BookType.video} > 0")
     fun flowVideo(): Flow<List<Book>>

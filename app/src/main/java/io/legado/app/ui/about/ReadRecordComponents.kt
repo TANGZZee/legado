@@ -11,12 +11,14 @@ enum class ReadRecordComponentType(
     @StringRes val titleRes: Int,
     @StringRes val hintRes: Int
 ) {
+    STATISTICS(R.string.read_record_component_statistics, R.string.read_record_component_hint_statistics),
     OVERVIEW(R.string.read_record_component_overview, R.string.read_record_component_hint_overview),
     HEATMAP(R.string.read_record_component_heatmap, R.string.read_record_component_hint_heatmap),
     RECENT_BOOKS(R.string.read_record_component_recent_books, R.string.read_record_component_hint_recent_books),
     DAILY_RECORDS(R.string.read_record_component_daily_records, R.string.read_record_component_hint_daily_records),
     RECENT_COVERS(R.string.read_record_component_recent_covers, R.string.read_record_component_hint_recent_covers),
     READ_RANK(R.string.read_record_component_read_rank, R.string.read_record_component_hint_read_rank),
+    TREND(R.string.read_record_component_trend, R.string.read_record_component_hint_trend),
     GOAL_CARD(R.string.read_record_component_goal_card, R.string.read_record_component_hint_goal_card);
 
     companion object {
@@ -34,6 +36,8 @@ data class ReadRecordComponentItem(
 object ReadRecordComponents {
 
     private val defaultOrder = listOf(
+        ReadRecordComponentType.STATISTICS,
+        ReadRecordComponentType.TREND,
         ReadRecordComponentType.GOAL_CARD,
         ReadRecordComponentType.OVERVIEW,
         ReadRecordComponentType.HEATMAP,

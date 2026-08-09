@@ -218,6 +218,8 @@ class BookshelfTagManageActivity : BaseActivity<ActivityBookshelfTagManageBindin
             BookGroup.IdLocal -> books.filter { it.type and BookType.local > 0 }
             BookGroup.IdAudio -> books.filter { it.type and BookType.audio > 0 }
             BookGroup.IdVideo -> books.filter { it.type and BookType.video > 0 }
+            BookGroup.IdNovel -> books.filter { it.type and BookType.text > 0 }
+            BookGroup.IdComic -> books.filter { it.type and BookType.image > 0 }
             BookGroup.IdError -> books.filter { it.type and BookType.updateError > 0 }
             BookGroup.IdNetNone -> books.filter {
                 it.type and BookType.audio == 0 &&

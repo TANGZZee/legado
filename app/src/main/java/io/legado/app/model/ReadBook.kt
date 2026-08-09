@@ -94,6 +94,11 @@ object ReadBook : CoroutineScope by MainScope() {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
+    private var readWordBookUrl: String = ""
+    private var readChapterWordCounts: MutableMap<Int, Long> = mutableMapOf()
+    private var lastReadChapterIndex: Int = -1
+    private var lastReadChapterPos: Int = 0
+    private val wordCountPattern = Regex("([0-9]+(?:\\.[0-9]+)?)[万千百]?")
     private const val READ_ALOUD_USER_NAVIGATION_LOCK_MS = 1500L
     @Volatile
     private var readAloudUserNavigationUntil = 0L
@@ -155,6 +160,7 @@ object ReadBook : CoroutineScope by MainScope() {
         contentProcessor = ContentProcessor.get(book)
         durChapterIndex = book.durChapterIndex
         durChapterPos = book.durChapterPos
+        resetReadWordTracking(book)
         isLocalBook = book.isLocal
         clearTextChapter()
         callBack?.upContent()
@@ -416,13 +422,73 @@ object ReadBook : CoroutineScope by MainScope() {
             return
         }
         executor.execute {
+            val currentBook = book ?: return@execute
             val now = System.currentTimeMillis()
             val delta = now - readStartTime
+            val readWords = readWordsDelta(currentBook)
             readRecord.readTime += delta
             readStartTime = now
             readRecord.lastRead = now
             appDb.readRecordDao.insert(readRecord)
-            ReadRecordDailyHelper.record(delta, now, forceWidgetUpdate)
+            ReadRecordDailyHelper.record(
+                book = currentBook,
+                readTime = delta,
+                readWords = readWords,
+                finished = simulatedChapterSize > 0 && durChapterIndex >= simulatedChapterSize - 1,
+                timestamp = now,
+                forceWidgetUpdate = forceWidgetUpdate
+            )
+        }
+    }
+
+    private fun resetReadWordTracking(book: Book) {
+        readWordBookUrl = book.bookUrl
+        readChapterWordCounts = mutableMapOf()
+        lastReadChapterIndex = book.durChapterIndex
+        lastReadChapterPos = book.durChapterPos.coerceAtLeast(0)
+    }
+
+    private fun readWordsDelta(book: Book): Long {
+        if (readWordBookUrl != book.bookUrl) {
+            resetReadWordTracking(book)
+        }
+        val currentChapterIndex = durChapterIndex.coerceAtLeast(0)
+        val currentChapterPos = durChapterPos.coerceAtLeast(0)
+        val previousChapterIndex = lastReadChapterIndex
+        val previousChapterPos = lastReadChapterPos
+        lastReadChapterIndex = currentChapterIndex
+        lastReadChapterPos = currentChapterPos
+        if (previousChapterIndex < 0 || currentChapterIndex < previousChapterIndex) {
+            return 0L
+        }
+        if (currentChapterIndex == previousChapterIndex) {
+            return (currentChapterPos - previousChapterPos).coerceAtLeast(0).toLong()
+        }
+        val previousChapterLength = chapterWordCount(book, previousChapterIndex)
+        val intermediateLength = (previousChapterIndex + 1 until currentChapterIndex)
+            .sumOf { chapterWordCount(book, it) }
+        return (previousChapterLength - previousChapterPos)
+            .coerceAtLeast(0L) + intermediateLength + currentChapterPos
+    }
+
+    private fun chapterWordCount(book: Book, index: Int): Long {
+        readChapterWordCounts[index]?.let { return it }
+        val count = appDb.bookChapterDao.getChapter(book.bookUrl, index)
+            ?.wordCount
+            ?.let(::parseWordCount)
+            ?: 0L
+        readChapterWordCounts[index] = count
+        return count
+    }
+
+    private fun parseWordCount(value: String?): Long {
+        val match = wordCountPattern.find(value.orEmpty()) ?: return 0L
+        val number = match.groupValues[1].toDoubleOrNull() ?: return 0L
+        return when {
+            value?.contains("万") == true -> (number * 10_000).toLong()
+            value.orEmpty().contains("千") -> (number * 1_000).toLong()
+            value.orEmpty().contains("百") -> (number * 100).toLong()
+            else -> number.toLong()
         }
     }
 

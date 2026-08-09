@@ -34,6 +34,20 @@ interface BookGroupDao {
             or (groupId = -2 and exists (select 1 from books where type & ${BookType.local} > 0))
             or (groupId = -3 and exists (select 1 from books where type & ${BookType.audio} > 0))
             or (groupId = -6 and exists (select 1 from books where type & ${BookType.video} > 0))
+            or (groupId = ${BookGroup.IdNovel} and exists (select 1 from books where type & ${BookType.text} > 0)
+                and not exists (
+                    select 1 from book_groups
+                    where groupId > 0 and show > 0
+                    and groupName = (select groupName from book_groups where groupId = ${BookGroup.IdNovel})
+                )
+            )
+            or (groupId = ${BookGroup.IdComic} and exists (select 1 from books where type & ${BookType.image} > 0)
+                and not exists (
+                    select 1 from book_groups
+                    where groupId > 0 and show > 0
+                    and groupName = (select groupName from book_groups where groupId = ${BookGroup.IdComic})
+                )
+            )
             or (groupId = -11 and exists (select 1 from books where type & ${BookType.updateError} > 0))
             or (groupId = -4 
                 and exists (

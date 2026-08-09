@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.read.page.provider
+﻿package io.legado.app.ui.book.read.page.provider
 
 import android.graphics.Paint.FontMetrics
 import android.graphics.RectF
@@ -50,6 +50,10 @@ object ChapterProvider {
 
     @JvmStatic
     var viewHeight = 0
+        private set
+
+    @JvmStatic
+    var viewSizeUnsettled = false
         private set
 
     @JvmStatic
@@ -143,6 +147,7 @@ object ChapterProvider {
     }
 
     private var upViewSizeRunnable: Runnable? = null
+    private var unsettledRunnable: Runnable? = null
 
     init {
         upStyle()
@@ -284,13 +289,14 @@ object ChapterProvider {
             return
         }
         if (width != viewWidth || height != viewHeight) {
-            if (ReadBook.book?.isEpub == true) {
-                upViewSizeRunnable?.let {
-                    handler.removeCallbacks(it)
-                    upViewSizeRunnable = null
-                }
+            if (viewSizeUnsettled || ReadBook.book?.isEpub == true) {
+                cancelPendingUpViewSize()
                 notifyViewSizeChange(width, height)
+                if (viewSizeUnsettled) {
+                    resetUnsettledTimer()
+                }
             } else if (width == viewWidth) {
+                cancelPendingUpViewSize()
                 upViewSizeRunnable = handler.postDelayed(300) {
                     upViewSizeRunnable = null
                     notifyViewSizeChange(width, height)
@@ -301,6 +307,29 @@ object ChapterProvider {
         } else if (upViewSizeRunnable != null) {
             handler.removeCallbacks(upViewSizeRunnable!!)
             upViewSizeRunnable = null
+        }
+    }
+
+    fun markViewSizeUnsettled() {
+        viewSizeUnsettled = true
+        resetUnsettledTimer()
+    }
+
+    private fun cancelPendingUpViewSize() {
+        upViewSizeRunnable?.let {
+            handler.removeCallbacks(it)
+            upViewSizeRunnable = null
+        }
+    }
+
+    private fun resetUnsettledTimer() {
+        unsettledRunnable?.let {
+            handler.removeCallbacks(it)
+            unsettledRunnable = null
+        }
+        unsettledRunnable = handler.postDelayed(300) {
+            unsettledRunnable = null
+            viewSizeUnsettled = false
         }
     }
 

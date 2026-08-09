@@ -141,7 +141,12 @@ object ReadManga : CoroutineScope by MainScope() {
             readStartTime = now
             readRecord.lastRead = now
             appDb.readRecordDao.insert(readRecord)
-            ReadRecordDailyHelper.record(delta, now)
+            ReadRecordDailyHelper.record(
+                book = book,
+                readTime = delta,
+                finished = simulatedChapterSize > 0 && durChapterIndex >= simulatedChapterSize - 1,
+                timestamp = now
+            )
         }
     }
 

@@ -195,6 +195,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             val date = month.atDay((index + 1).coerceIn(1, month.lengthOfMonth()))
             if (selectedDate != date) {
                 selectedDate = date
+                statisticsAnchor = date
                 recordDaysExpanded = false
                 loadData(force = true)
             }
@@ -236,11 +237,13 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
                         },
                         onPrevious = {
                             statisticsAnchor = moveStatisticsAnchor(-1)
+                            selectedDate = statisticsAnchor
                             loadData(force = true)
                         },
                         onNext = {
                             if (ui.canGoNext) {
                                 statisticsAnchor = moveStatisticsAnchor(1)
+                                selectedDate = statisticsAnchor
                                 loadData(force = true)
                             }
                         }
@@ -356,6 +359,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
 
     override fun onResume() {
         super.onResume()
+        componentItems = ReadRecordComponents.load()
+        applyComponentLayout()
         viewLifecycleOwner.lifecycleScope.launch {
             val latestRecentReadTime = withContext(IO) {
                 appDb.readRecentBookDao.latestReadTime() ?: 0L
@@ -585,6 +590,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         val targetMonth = YearMonth.of(selectedDate.year, monthValue)
         selectedDate = targetMonth.atDay(selectedDate.dayOfMonth.coerceAtMost(targetMonth.lengthOfMonth()))
         recordDaysExpanded = false
+        statisticsAnchor = selectedDate
         loadData(force = true)
     }
 
@@ -598,6 +604,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             val targetMonth = YearMonth.of(targetYear, selectedDate.monthValue)
             selectedDate = targetMonth.atDay(selectedDate.dayOfMonth.coerceAtMost(targetMonth.lengthOfMonth()))
             recordDaysExpanded = false
+            statisticsAnchor = selectedDate
             loadData(force = true)
         }
     }
@@ -879,6 +886,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             requireContext(),
             { _, year, month, dayOfMonth ->
                 selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                statisticsAnchor = selectedDate
                 loadData(force = true)
             },
             date.year,

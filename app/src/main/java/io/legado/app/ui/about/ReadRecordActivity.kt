@@ -120,6 +120,8 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
 
     override fun onResume() {
         super.onResume()
+        componentItems = ReadRecordComponents.load()
+        applyComponentLayout()
         loadData()
     }
 

@@ -1,9 +1,8 @@
-package io.legado.app.ui.about
+﻿package io.legado.app.ui.about
 
 import android.content.Context
 import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,7 +54,7 @@ object ReadRecordComponentConfigDialog {
     ) {
         lateinit var dialog: AlertDialog
         val fixedListHeight = min(
-            420.dpToPx(),
+            360.dpToPx(),
             (context.resources.displayMetrics.heightPixels * 0.48f).toInt()
         ).coerceAtLeast(260.dpToPx())
         val composeView = ComposeView(context).apply {
@@ -86,7 +85,7 @@ object ReadRecordComponentConfigDialog {
             .setView(composeView)
             .create()
         dialog.setOnShowListener {
-            dialog.setLayout(0.9f, 0.68f)
+            dialog.setLayout(0.9f, 0.92f)
         }
         dialog.applyModernWindowStyle()
         // AppDialogFrame 自带圆角面板背景，清掉 AlertDialog 自身窗口背景，避免双层背景。
@@ -181,8 +180,7 @@ private fun ReadRecordComponentConfigRow(
     val bodyFont = FontFamily(context.uiTypeface())
     LegadoMiuixCard(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle(!item.enabled) },
+            .fillMaxWidth(),
         color = palette.surfaceVariant,
         contentColor = palette.primaryText,
         cornerRadius = style.panelRadius,

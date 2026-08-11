@@ -412,7 +412,7 @@ private fun ReadRecordTrendChart(
                 points.forEach { point ->
                     drawRoundRect(
                         color = chartColor,
-                        topLeft = Offset(point.x - barWidth / 2, point.y),
+                        topLeft = Offset(point.x.coerceIn(chartLeft + barWidth / 2, chartRight - barWidth / 2) - barWidth / 2, point.y),
                         size = androidx.compose.ui.geometry.Size(barWidth, chartBottom - point.y),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 4, barWidth / 4)
                     )
@@ -421,7 +421,7 @@ private fun ReadRecordTrendChart(
                     val sp = points[selectedIndex]
                     drawRoundRect(
                         color = chartColor,
-                        topLeft = Offset(sp.x - barWidth / 2, sp.y),
+                        topLeft = Offset(sp.x.coerceIn(chartLeft + barWidth / 2, chartRight - barWidth / 2) - barWidth / 2, sp.y),
                         size = androidx.compose.ui.geometry.Size(barWidth, chartBottom - sp.y),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 4, barWidth / 4),
                         style = Stroke(width = 2.dp.toPx())

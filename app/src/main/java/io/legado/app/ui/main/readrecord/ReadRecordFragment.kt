@@ -668,7 +668,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             data = calculateReadRecordTrend(
                 period = statisticsPeriod,
                 anchor = statisticsAnchor,
-                dailyBooks = appDb.readRecordDailyBookDao.all
+                dailyBooks = appDb.readRecordDailyBookDao.all,
+                hourlyRecords = appDb.readRecordDailyHourDao.all
             )
         )
     }

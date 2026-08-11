@@ -1,4 +1,4 @@
-package io.legado.app.data
+﻿package io.legado.app.data
 
 import androidx.room.DeleteColumn
 import androidx.room.migration.AutoMigrationSpec
@@ -25,6 +25,7 @@ object DatabaseMigrations {
             migration_99_100, migration_100_101, migration_101_102, migration_102_103,
             migration_103_104, migration_104_105, migration_105_106,
             migration_106_107, migration_107_108, migration_108_109,
+            migration_110_111,
         )
     }
 
@@ -36,6 +37,23 @@ object DatabaseMigrations {
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_name` ON `books` (`name`)")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_author` ON `books` (`author`)")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_type` ON `books` (`type`)")
+        }
+    }
+
+    private val migration_110_111 = object : Migration(110, 111) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `readRecordDailyHour` (
+                    `date` TEXT NOT NULL,
+                    `hour` INTEGER NOT NULL,
+                    `readTime` INTEGER NOT NULL DEFAULT 0,
+                    `readWords` INTEGER NOT NULL DEFAULT 0,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`, `hour`)
+                )
+                """.trimIndent()
+            )
         }
     }
 

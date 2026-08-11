@@ -3,6 +3,7 @@
 import kotlin.math.pow
 
 import io.legado.app.data.entities.ReadRecordDailyBook
+import io.legado.app.data.entities.ReadRecordDailyHour
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -51,19 +52,23 @@ data class ReadRecordTrendUi(
 fun calculateReadRecordTrend(
     period: ReadRecordStatsPeriod,
     anchor: LocalDate,
-    dailyBooks: List<ReadRecordDailyBook>
+    dailyBooks: List<ReadRecordDailyBook>,
+    hourlyRecords: List<ReadRecordDailyHour> = emptyList()
 ): ReadRecordTrendData {
     val grouped = dailyBooks.groupByDate()
     return when (period) {
         ReadRecordStatsPeriod.DAY -> {
             val date = anchor
-            val now = java.time.LocalDateTime.now()
-            val isToday = date == now.toLocalDate()
-            val activeHour = if (isToday) now.hour.coerceIn(0, 23) else 12
-            val dailyPoint = grouped[date] ?: ReadRecordTrendPoint(date, 0L, 0L)
+            val hourMap = hourlyRecords
+                .filter { it.date == date.toString() }
+                .associateBy { it.hour }
             val points = (0..24).map { hour ->
-                if (hour == activeHour) dailyPoint
-                else ReadRecordTrendPoint(date, 0L, 0L)
+                val record = hourMap[hour]
+                ReadRecordTrendPoint(
+                    date = date,
+                    readTime = record?.readTime ?: 0L,
+                    readWords = record?.readWords ?: 0L
+                )
             }
             ReadRecordTrendData(YearMonth.from(date), points)
         }

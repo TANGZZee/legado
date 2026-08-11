@@ -1,4 +1,4 @@
-package io.legado.app.data
+﻿package io.legado.app.data
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
@@ -35,6 +35,7 @@ import io.legado.app.data.dao.ReadRecentBookDao
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.dao.ReadRecordDailyBookDao
 import io.legado.app.data.dao.ReadRecordDailyDao
+import io.legado.app.data.dao.ReadRecordDailyHourDao
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.dao.RssArticleDao
 import io.legado.app.data.dao.RssReadRecordDao
@@ -83,6 +84,7 @@ import io.legado.app.data.entities.ReadRecentBook
 import io.legado.app.data.entities.ReadRecord
 import io.legado.app.data.entities.ReadRecordDailyBook
 import io.legado.app.data.entities.ReadRecordDaily
+import io.legado.app.data.entities.ReadRecordDailyHour
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
@@ -108,13 +110,14 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 110,
+    version = 111,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
         RssSource::class, Bookmark::class, RssArticle::class, RssReadRecord::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, ReadRecordDaily::class,
         ReadRecordDailyBook::class,
+        ReadRecordDailyHour::class,
         HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         ReadRecentBook::class, ParagraphRule::class, BookParagraphRule::class,
@@ -200,6 +203,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val readRecordDao: ReadRecordDao
     abstract val readRecordDailyBookDao: ReadRecordDailyBookDao
     abstract val readRecordDailyDao: ReadRecordDailyDao
+    abstract val readRecordDailyHourDao: ReadRecordDailyHourDao
     abstract val readRecentBookDao: ReadRecentBookDao
     abstract val httpTTSDao: HttpTTSDao
     abstract val cacheDao: CacheDao

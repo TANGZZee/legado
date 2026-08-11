@@ -4,6 +4,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.ReadRecordDailyBook
 import io.legado.app.data.entities.ReadRecordDaily
+import io.legado.app.data.entities.ReadRecordDailyHour
 import io.legado.app.receiver.ReadGoalWidgetProvider
 import io.legado.app.receiver.ReadRankWidgetProvider
 import splitties.init.appCtx
@@ -43,6 +44,9 @@ object ReadRecordDailyHelper {
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
             .format(dateFormatter)
+        val hour = Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .hour
         val current = appDb.readRecordDailyDao.get(dateKey)
         val record = if (current == null) {
             ReadRecordDaily(
@@ -57,6 +61,24 @@ object ReadRecordDailyHelper {
             )
         }
         appDb.readRecordDailyDao.insert(record)
+        val currentHour = appDb.readRecordDailyHourDao.get(dateKey, hour)
+        appDb.readRecordDailyHourDao.insert(
+            if (currentHour == null) {
+                ReadRecordDailyHour(
+                    date = dateKey,
+                    hour = hour,
+                    readTime = readTime,
+                    readWords = readWords.coerceAtLeast(0L),
+                    updatedAt = timestamp
+                )
+            } else {
+                currentHour.copy(
+                    readTime = currentHour.readTime + readTime,
+                    readWords = currentHour.readWords + readWords.coerceAtLeast(0L),
+                    updatedAt = timestamp
+                )
+            }
+        )
         if (book != null) {
             val currentBook = appDb.readRecordDailyBookDao.get(dateKey, book.bookUrl)
             appDb.readRecordDailyBookDao.insert(

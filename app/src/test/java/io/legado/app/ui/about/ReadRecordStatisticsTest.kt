@@ -65,6 +65,66 @@ class ReadRecordStatisticsTest {
     }
 
     @Test
+    fun calculatesTimeOfDaySummaryAndRatioForSelectedDay() {
+        val date = "2026-08-04"
+        val hourly = listOf(
+            io.legado.app.data.entities.ReadRecordDailyHour(date, 16, 20_000L, 100L),
+            io.legado.app.data.entities.ReadRecordDailyHour(date, 18, 60_000L, 390L),
+            io.legado.app.data.entities.ReadRecordDailyHour(date, 2, 10_000L, 0L)
+        )
+
+        val result = calculateReadRecordTimeOfDay(
+            period = ReadRecordStatsPeriod.DAY,
+            anchor = LocalDate.of(2026, 8, 4),
+            hourlyRecords = hourly
+        )
+
+        assertEquals(24, result.hourly.size)
+        assertEquals(18, result.summary.peakHour)
+        assertEquals(ReadRecordTimeBucket.EVENING, result.summary.peakBucket)
+        assertEquals(20_000L, result.ratios[ReadRecordTimeBucket.AFTERNOON])
+        assertEquals(60_000L, result.ratios[ReadRecordTimeBucket.EVENING])
+        assertEquals(10_000L, result.ratios[ReadRecordTimeBucket.DAWN])
+        assertEquals(90_000L, result.summary.totalTime)
+        assertEquals(10_000L, result.summary.nightTime)
+    }
+
+    @Test
+    fun aggregatesTimeOfDayAcrossDaysAndKeepsEmptyBuckets() {
+        val hourly = listOf(
+            io.legado.app.data.entities.ReadRecordDailyHour("2026-08-03", 13, 30_000L),
+            io.legado.app.data.entities.ReadRecordDailyHour("2026-08-04", 18, 60_000L)
+        )
+
+        val result = calculateReadRecordTimeOfDay(
+            period = ReadRecordStatsPeriod.WEEK,
+            anchor = LocalDate.of(2026, 8, 4),
+            hourlyRecords = hourly
+        )
+
+        assertEquals(30_000L, result.ratios[ReadRecordTimeBucket.AFTERNOON])
+        assertEquals(60_000L, result.ratios[ReadRecordTimeBucket.EVENING])
+        assertEquals(0L, result.ratios[ReadRecordTimeBucket.MORNING])
+        assertEquals(18, result.summary.peakHour)
+    }
+
+    @Test
+    fun averagesTheFirstReadingHourAcrossDays() {
+        val hourly = listOf(
+            io.legado.app.data.entities.ReadRecordDailyHour("2026-08-03", 12, 30_000L),
+            io.legado.app.data.entities.ReadRecordDailyHour("2026-08-04", 18, 60_000L)
+        )
+
+        val result = calculateReadRecordTimeOfDay(
+            period = ReadRecordStatsPeriod.WEEK,
+            anchor = LocalDate.of(2026, 8, 4),
+            hourlyRecords = hourly
+        )
+
+        assertEquals(15, result.summary.averageStartHour)
+    }
+
+    @Test
     fun periodRangesMoveByTheirNaturalUnit() {
         val anchor = LocalDate.of(2026, 8, 8)
 

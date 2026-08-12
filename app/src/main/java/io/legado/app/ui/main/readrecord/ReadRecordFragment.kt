@@ -59,6 +59,15 @@ import io.legado.app.ui.about.ReadRecordStatsPeriod
 import io.legado.app.ui.about.ReadRecordStatsRange
 import io.legado.app.ui.about.ReadRecordTrendCard
 import io.legado.app.ui.about.ReadRecordTrendUi
+import io.legado.app.ui.about.ReadRecordTimeBucket
+import io.legado.app.ui.about.ReadRecordTimeBucketCard
+import io.legado.app.ui.about.ReadRecordTimeBucketUi
+import io.legado.app.ui.about.ReadRecordTimeOfDayCard
+import io.legado.app.ui.about.ReadRecordTimeOfDayUi
+import io.legado.app.ui.about.calculateReadRecordTimeOfDay
+import io.legado.app.ui.about.formatReadRecordBucket
+import io.legado.app.ui.about.formatReadRecordClock
+import io.legado.app.ui.about.formatReadRecordDuration
 import io.legado.app.ui.about.calculateReadRecordStatistics
 import io.legado.app.ui.about.calculateReadRecordTrend
 import io.legado.app.ui.about.openReadRecordBook
@@ -139,6 +148,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
     private val goalUiState = mutableStateOf<ReadRecordGoalUi?>(null)
     private val statisticsUiState = mutableStateOf<ReadRecordStatisticsUi?>(null)
     private val trendUiState = mutableStateOf<ReadRecordTrendUi?>(null)
+    private val timeOfDayUiState = mutableStateOf<ReadRecordTimeOfDayUi?>(null)
+    private val timeBucketRatioUiState = mutableStateOf<List<ReadRecordTimeBucketUi>>(emptyList())
     private var currentRecentBooks: List<RecentReadBook> = emptyList()
     private var currentDailyTimeline: List<DailyReadSummary> = emptyList()
     private var currentVisibleRankItems: List<ReadRecordRankItem> = emptyList()
@@ -259,6 +270,27 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
                 trendUiState.value?.let { ui ->
                     ReadRecordTrendCard(ui = ui)
                 }
+            }
+        }
+        binding.panelTimeOfDay.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.panelTimeOfDay.setContent {
+            LegadoComposeTheme {
+                timeOfDayUiState.value?.let { ui ->
+                    ReadRecordTimeOfDayCard(ui = ui)
+                }
+            }
+        }
+        binding.panelTimeBucketRatio.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.panelTimeBucketRatio.setContent {
+            LegadoComposeTheme {
+                ReadRecordTimeBucketCard(
+                    title = getString(R.string.read_record_time_of_day_ratio),
+                    buckets = timeBucketRatioUiState.value
+                )
             }
         }
         binding.llRecentBooks.setViewCompositionStrategy(
@@ -489,6 +521,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             readBookCount = appDb.readRecordDao.allShow.size,
             statisticsUi = buildStatisticsUi(),
             trendUi = buildTrendUi(),
+            timeOfDayUi = buildTimeOfDayUi(),
+            timeBucketRatioUi = buildTimeBucketRatioUi(),
             latestRecentReadTime = appDb.readRecentBookDao.latestReadTime() ?: 0L
         )
     }
@@ -507,6 +541,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         overviewUiState.value = dashboard.toOverviewUi()
         statisticsUiState.value = dashboard.statisticsUi
         trendUiState.value = dashboard.trendUi
+        timeOfDayUiState.value = dashboard.timeOfDayUi
+        timeBucketRatioUiState.value = dashboard.timeBucketRatioUi
 
         val startDate = dashboard.heatmapCells.firstOrNull()?.date ?: dashboard.today
         val centerDate = dashboard.heatmapCells.getOrNull(dashboard.heatmapCells.size / 2)?.date
@@ -631,6 +667,8 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         val componentViews = linkedMapOf(
             ReadRecordComponentType.STATISTICS to binding.panelStatistics,
             ReadRecordComponentType.TREND to binding.panelTrend,
+            ReadRecordComponentType.TIME_OF_DAY to binding.panelTimeOfDay,
+            ReadRecordComponentType.TIME_BUCKET_RATIO to binding.panelTimeBucketRatio,
             ReadRecordComponentType.OVERVIEW to binding.panelOverview,
             ReadRecordComponentType.HEATMAP to binding.panelHeatmap,
             ReadRecordComponentType.RECENT_BOOKS to binding.panelRecentBooks,
@@ -679,6 +717,45 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
                 hourlyRecords = appDb.readRecordDailyHourDao.all
             )
         )
+    }
+
+    private fun buildTimeOfDayUi(): ReadRecordTimeOfDayUi {
+        val result = calculateReadRecordTimeOfDay(
+            period = statisticsPeriod,
+            anchor = statisticsAnchor,
+            hourlyRecords = appDb.readRecordDailyHourDao.all
+        )
+        return ReadRecordTimeOfDayUi(
+            title = getString(R.string.read_record_component_time_of_day),
+            hourly = result.hourly,
+            peakHour = formatReadRecordClock(result.summary.peakHour),
+            peakBucket = formatReadRecordBucket(result.summary.peakBucket),
+            averageStart = formatReadRecordClock(result.summary.averageStartHour),
+            nightRatio = "${result.summary.nightRatioPercent}%",
+            bucketValues = timeBucketUi(result.ratios)
+        )
+    }
+
+    private fun buildTimeBucketRatioUi(): List<ReadRecordTimeBucketUi> {
+        val result = calculateReadRecordTimeOfDay(
+            period = statisticsPeriod,
+            anchor = statisticsAnchor,
+            hourlyRecords = appDb.readRecordDailyHourDao.all
+        )
+        return timeBucketUi(result.ratios)
+    }
+
+    private fun timeBucketUi(values: Map<ReadRecordTimeBucket, Long>): List<ReadRecordTimeBucketUi> {
+        val colors = listOf(0xFFE3E5E8L, 0xFFB7BBC1L, 0xFF777C84L, 0xFF25272BL)
+        return ReadRecordTimeBucket.entries.mapIndexed { index, bucket ->
+            val millis = values[bucket] ?: 0L
+            ReadRecordTimeBucketUi(
+                label = bucket.label,
+                duration = formatReadRecordDuration(millis),
+                millis = millis,
+                color = colors[index]
+            )
+        }
     }
 
     private fun buildStatisticsUi(): ReadRecordStatisticsUi {
@@ -1176,7 +1253,9 @@ private data class ReadRecordDashboard(
     val readBookCount: Int,
     val latestRecentReadTime: Long,
     val statisticsUi: ReadRecordStatisticsUi,
-    val trendUi: ReadRecordTrendUi
+    val trendUi: ReadRecordTrendUi,
+    val timeOfDayUi: ReadRecordTimeOfDayUi,
+    val timeBucketRatioUi: List<ReadRecordTimeBucketUi>
 )
 
 private data class RecentReadBook(

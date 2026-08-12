@@ -99,6 +99,16 @@
                     android:layout_height="wrap_content" />
 
                 <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/panel_time_of_day"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/panel_time_bucket_ratio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/panel_overview"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />

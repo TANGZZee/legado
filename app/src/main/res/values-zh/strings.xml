@@ -890,6 +890,11 @@
     <string name="read_record_component_read_rank">阅读时长排行</string>
     <string name="read_record_component_trend">阅读趋势</string>
     <string name="read_record_component_hint_trend">阅读时间、字数、速度趋势图表</string>
+    <string name="read_record_component_time_of_day">阅读时段</string>
+    <string name="read_record_component_hint_time_of_day">按小时查看阅读时段和各时段占比</string>
+    <string name="read_record_component_time_bucket_ratio">时段占比</string>
+    <string name="read_record_component_hint_time_bucket_ratio">查看凌晨、上午、下午和晚上的阅读时长分布</string>
+    <string name="read_record_time_of_day_ratio">时段占比</string>
     <string name="read_record_component_goal_card">阅读目标卡</string>
     <string name="read_record_component_hint_statistics">按日、周、月、年和累计查看阅读指标</string>
     <string name="read_record_component_hint_overview">展示今日、本月、累计和活跃日</string>

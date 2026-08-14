@@ -46,7 +46,8 @@ data class ReadRecordStatisticsMetricUi(
     val value: String,
     val label: String,
     val trend: String,
-    val trendColor: Int
+    val trendColor: Int,
+    val onClick: (() -> Unit)? = null
 )
 
 @Immutable
@@ -231,7 +232,14 @@ private fun ReadRecordStatisticsMetric(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .then(
+                if (metric.onClick != null) {
+                    Modifier.clickable { metric.onClick?.invoke() }
+                } else {
+                    Modifier
+                }
+            ),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
@@ -259,6 +267,15 @@ private fun ReadRecordStatisticsMetric(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (metric.onClick != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Image(
+                    painter = painterResource(R.drawable.ic_swap_horiz),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(secondaryText.copy(alpha = 0.7f)),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
         Text(
             text = metric.trend,

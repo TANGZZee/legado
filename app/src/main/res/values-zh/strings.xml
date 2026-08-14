@@ -934,6 +934,9 @@
     <string name="read_record_stats_trend_up">↑ %1$s</string>
     <string name="read_record_stats_trend_down">↓ %1$s</string>
     <string name="read_record_stats_trend_neutral">— 持平</string>
+    <string name="read_record_stats_time_compact">%1$d小时%2$d分</string>
+    <string name="read_record_stats_hour_compact">%1$d小时</string>
+    <string name="read_record_stats_minute_compact">%1$d分</string>
     <string name="read_record_recent_covers">最近在读</string>
     <string name="read_record_read_rank">阅读时长排行</string>
     <string name="read_record_view_all_rank">查看全部排行</string>

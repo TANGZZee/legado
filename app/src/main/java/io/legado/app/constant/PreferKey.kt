@@ -328,6 +328,7 @@ object PreferKey {
     const val readRecordComponents = "readRecordComponents"
     const val readRecordRecentSnapshots = "readRecordRecentSnapshots"
     const val readRecordGoalConfig = "readRecordGoalConfig"
+    const val readRecordStatsTimeCompact = "readRecordStatsTimeCompact"
     const val localBookImportSort = "localBookImportSort"
     const val customWelcome = "customWelcome"
     const val welcomeShowTime = "welcomeShowTime"

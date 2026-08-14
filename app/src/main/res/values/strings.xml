@@ -1166,6 +1166,9 @@
     <string name="read_record_stats_trend_up">↑ %1$s</string>
     <string name="read_record_stats_trend_down">↓ %1$s</string>
     <string name="read_record_stats_trend_neutral">— Flat</string>
+    <string name="read_record_stats_time_compact">%1$d h %2$d min</string>
+    <string name="read_record_stats_hour_compact">%1$d h</string>
+    <string name="read_record_stats_minute_compact">%1$d min</string>
     <string name="read_record_recent_covers">Recent reading</string>
     <string name="read_record_read_rank">Reading rank</string>
     <string name="read_record_view_all_rank">View all rank</string>

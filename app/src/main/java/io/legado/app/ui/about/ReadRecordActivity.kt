@@ -15,6 +15,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseActivity
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.ReadRecordDailyBook
@@ -34,6 +35,8 @@ import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.ImageCropHelper
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
+import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.registerForActivityResult
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
@@ -89,6 +92,9 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
     private var currentRecentCovers: List<ReadRecentVisualItem> = emptyList()
     private var statisticsPeriod = ReadRecordStatsPeriod.MONTH
     private var statisticsAnchor = LocalDate.now()
+    private val statisticsTimeCompact = mutableStateOf(
+        getPrefBoolean(PreferKey.readRecordStatsTimeCompact)
+    )
     private var pendingAvatarUpdate: ((String) -> Unit)? = null
     private var pendingAvatarCropRequest: ImageCropHelper.Request? = null
     private val selectGoalAvatar = registerForActivityResult(HandleFileContract()) {
@@ -512,11 +518,19 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
             metrics = listOf(
                 statisticsMetric(
                     iconRes = R.drawable.ic_timer_black_24dp,
-                    value = formatDuring(current.readingTime),
+                    value = formatStatisticsDuring(current.readingTime),
                     label = getString(R.string.read_record_stats_reading_time),
                     current = current.readingTime,
                     previous = previous.readingTime,
-                    format = ::formatDuring
+                    format = ::formatStatisticsDuring,
+                    onClick = {
+                        statisticsTimeCompact.value = !statisticsTimeCompact.value
+                        putPrefBoolean(
+                            PreferKey.readRecordStatsTimeCompact,
+                            statisticsTimeCompact.value
+                        )
+                        loadData()
+                    }
                 ),
                 statisticsMetric(
                     iconRes = R.drawable.ic_daytime,
@@ -645,7 +659,8 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
         label: String,
         current: Long,
         previous: Long,
-        format: (Long) -> String
+        format: (Long) -> String,
+        onClick: (() -> Unit)? = null
     ): ReadRecordStatisticsMetricUi {
         val difference = current - previous
         val trend = when {
@@ -662,7 +677,8 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
                 difference > 0L -> 0xFF4CAF50.toInt()
                 difference < 0L -> 0xFFF44336.toInt()
                 else -> secondaryTextColor
-            }
+            },
+            onClick = onClick
         )
     }
 
@@ -946,6 +962,40 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
         }
         val time = "$d$h$m$s"
         return if (time.isBlank()) getString(R.string.duration_zero) else time
+    }
+
+    private fun formatStatisticsDuring(mss: Long): String {
+        val days = mss / (1000 * 60 * 60 * 24)
+        val hours = mss % (1000 * 60 * 60 * 24) / (1000 * 60 * 60)
+        val minutes = mss % (1000 * 60 * 60) / (1000 * 60)
+        val seconds = mss % (1000 * 60) / 1000
+        return if (statisticsTimeCompact.value) {
+            val totalMinutes = (mss + 30_000L) / (1000L * 60)
+            val compactHours = totalMinutes / 60
+            val compactMinutes = totalMinutes % 60
+            when {
+                compactHours > 0L && compactMinutes > 0L ->
+                    getString(R.string.read_record_stats_time_compact, compactHours, compactMinutes)
+                compactHours > 0L -> getString(R.string.read_record_stats_hour_compact, compactHours)
+                compactMinutes > 0L -> getString(R.string.read_record_stats_minute_compact, compactMinutes)
+                else -> getString(R.string.duration_zero)
+            }
+        } else {
+            val d = if (days > 0) getString(R.string.duration_day, days) else ""
+            val h = if (hours > 0) getString(R.string.duration_hour, hours) else ""
+            val m = if (minutes > 0) {
+                getString(R.string.read_record_stats_minute_compact, minutes)
+            } else {
+                ""
+            }
+            val s = if (seconds > 0 && days == 0L && hours == 0L) {
+                getString(R.string.duration_second, seconds)
+            } else {
+                ""
+            }
+            val time = "$d$h$m$s"
+            if (time.isBlank()) getString(R.string.duration_zero) else time
+        }
     }
 
     companion object {

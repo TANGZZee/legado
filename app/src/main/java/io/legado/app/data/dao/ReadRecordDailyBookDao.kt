@@ -27,6 +27,9 @@ interface ReadRecordDailyBookDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(record: ReadRecordDailyBook)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(records: List<ReadRecordDailyBook>)
+
     @Query("delete from readRecordDailyBooks")
     fun clear()
 

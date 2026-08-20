@@ -21,6 +21,9 @@ interface ReadRecordDailyHourDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(record: ReadRecordDailyHour)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(records: List<ReadRecordDailyHour>)
+
     @Query("delete from readRecordDailyHour")
     fun clear()
 }

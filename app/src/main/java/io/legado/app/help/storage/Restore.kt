@@ -25,6 +25,9 @@ import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.ReadRecordDaily
+import io.legado.app.data.entities.ReadRecordDailyBook
+import io.legado.app.data.entities.ReadRecordDailyHour
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
@@ -217,7 +220,16 @@ object Restore {
                 }
             }
         }
-        restoreBookCharacters(path)
+                fileToListT<ReadRecordDaily>(path, "readRecordDaily.json")?.let {
+                    insertRestored(it) { items -> appDb.readRecordDailyDao.insert(*items) }
+                }
+                fileToListT<ReadRecordDailyBook>(path, "readRecordDailyBooks.json")?.let {
+                    insertRestored(it) { items -> appDb.readRecordDailyBookDao.insertAll(items.toList()) }
+                            }
+                            fileToListT<ReadRecordDailyHour>(path, "readRecordDailyHour.json")?.let {
+                                insertRestored(it) { items -> appDb.readRecordDailyHourDao.insertAll(items.toList()) }
+                }
+                restoreBookCharacters(path)
         File(path, "servers.json").takeIf {
             it.exists()
         }?.runCatching {

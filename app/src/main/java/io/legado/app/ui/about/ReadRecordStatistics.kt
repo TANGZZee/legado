@@ -66,7 +66,8 @@ fun calculateReadRecordStatistics(
     anchor: LocalDate,
     dailyRecords: List<ReadRecordDaily>,
     dailyBooks: List<ReadRecordDailyBook>,
-    bookmarkTimes: List<Long>
+    bookmarkTimes: List<Long>,
+    legacyTotalReadingTime: Long? = null
 ): ReadRecordStatistics {
     val range = ReadRecordStatsRange.of(period, anchor)
     val records = dailyRecords.filter { record ->
@@ -93,7 +94,11 @@ fun calculateReadRecordStatistics(
             .toLocalDate()
         range.contains(date)
     }
-    val readingTime = records.sumOf { it.readTime.coerceAtLeast(0L) }
+    val readingTime = if (period == ReadRecordStatsPeriod.TOTAL && legacyTotalReadingTime != null) {
+        legacyTotalReadingTime.coerceAtLeast(0L)
+    } else {
+        records.sumOf { it.readTime.coerceAtLeast(0L) }
+    }
     val readingWords = books.sumOf { it.readWords.coerceAtLeast(0L) }
     val totalReadBooks = books.size
     val finishedBooks = books.count { it.finished }

@@ -772,19 +772,22 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
             legacyRecords = appDb.readRecordDao.allShow
         )
         val bookmarkTimes = appDb.bookmarkDao.all.map { it.time }
+        val legacyTotalReadingTime = appDb.readRecordDao.allTime
         val current = calculateReadRecordStatistics(
             period = statisticsPeriod,
             anchor = statisticsAnchor,
             dailyRecords = dailyRecords,
             dailyBooks = dailyBooks,
-            bookmarkTimes = bookmarkTimes
+            bookmarkTimes = bookmarkTimes,
+            legacyTotalReadingTime = legacyTotalReadingTime
         )
         val previous = calculateReadRecordStatistics(
             period = statisticsPeriod,
             anchor = moveStatisticsAnchor(-1),
             dailyRecords = dailyRecords,
             dailyBooks = dailyBooks,
-            bookmarkTimes = bookmarkTimes
+            bookmarkTimes = bookmarkTimes,
+            legacyTotalReadingTime = legacyTotalReadingTime
         )
         val range = ReadRecordStatsRange.of(statisticsPeriod, statisticsAnchor)
         val tabs = listOf(

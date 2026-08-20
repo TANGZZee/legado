@@ -11,6 +11,20 @@ import java.time.temporal.ChronoUnit
 class ReadRecordStatisticsTest {
 
     @Test
+    fun totalPeriodUsesLegacyReadRecordTimeSoItMatchesTheReadRecordCard() {
+        val statistics = calculateReadRecordStatistics(
+            period = ReadRecordStatsPeriod.TOTAL,
+            anchor = LocalDate.of(2026, 8, 15),
+            dailyRecords = listOf(ReadRecordDaily(date = "2026-08-01", readTime = 90_000L)),
+            dailyBooks = emptyList(),
+            bookmarkTimes = emptyList(),
+            legacyTotalReadingTime = 123_000L
+        )
+
+        assertEquals(123_000L, statistics.readingTime)
+    }
+
+    @Test
     fun aggregatesBookRowsAcrossDaysAndCountsNotesInRange() {
         val statistics = calculateReadRecordStatistics(
             period = ReadRecordStatsPeriod.MONTH,
